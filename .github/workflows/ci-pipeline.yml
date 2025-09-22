@@ -1,0 +1,61 @@
+# This workflow is named "CI Pipeline"
+name: CI Pipeline
+
+# This workflow will be triggered on every push to the 'main' branch
+on:
+  push:
+    branches: [ "main" ]
+
+# A workflow run is made up of one or more jobs that can run in parallel
+jobs:
+  # The "build-backend" job
+  build-backend:
+    # The type of runner that the job will run on (a virtual machine)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository under $GITHUB_WORKSPACE, so the job can access it
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up JDK 17, which is required by your Spring Boot application
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Step 3: Grant execute permission to the Maven wrapper
+      - name: Make Maven Wrapper Executable
+        run: chmod +x ./auth-service/mvnw
+
+      # Step 4: Build the Spring Boot application using the Maven wrapper
+      # The 'clean install' command compiles the code, runs tests, and packages the application
+      - name: Build Backend with Maven
+        run: ./auth-service/mvnw -f ./auth-service/pom.xml clean install
+
+  # The "build-frontend" job
+  build-frontend:
+    # This job also runs on the latest version of Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js. We specify version 20 to match your Dockerfile
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Step 3: Install all the frontend dependencies
+      # The --prefix flag tells npm which folder to run the command in
+      - name: Install Frontend Dependencies
+        run: npm install --prefix ./esports-frontend-master
+
+      # Step 4: Build the React application for production
+      - name: Build Frontend
+        run: npm run build --prefix ./esports-frontend-master
+
