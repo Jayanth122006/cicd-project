@@ -1,0 +1,49 @@
+services:
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-2006}
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Healthcheck to ensure the database is ready before other services start
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service (Spring Boot)
+  backend:
+    build:
+      context: ./auth-service
+    container_name: spring_backend
+    depends_on:
+      db:
+        condition: service_healthy # <-- WAITS for the database to be ready
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-2006}
+
+  # Frontend Service (React + Nginx)
+  frontend:
+    build:
+      # IMPORTANT: Make sure this path matches your frontend folder name
+      context: ./esports-frontend-master
+    container_name: react_frontend
+    ports:
+      - "5173:80" # Maps your local port 5173 to the container's port 80
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
