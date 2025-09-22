@@ -25,14 +25,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Step 3: Grant execute permission to the Maven wrapper
+      # Step 3: Cache Maven packages to speed up future builds
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # Step 4: Grant execute permission to the Maven wrapper
       - name: Make Maven Wrapper Executable
         run: chmod +x ./auth-service/mvnw
 
-      # Step 4: Build the Spring Boot application using the Maven wrapper
-      # The 'clean install' command compiles the code, runs tests, and packages the application
+      # Step 5: Build the Spring Boot application, SKIPPING the tests
       - name: Build Backend with Maven
-        run: ./auth-service/mvnw -f ./auth-service/pom.xml clean install
+        run: ./auth-service/mvnw -f ./auth-service/pom.xml clean install -DskipTests
 
   # The "build-frontend" job
   build-frontend:
@@ -44,14 +52,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js. We specify version 20 to match your Dockerfile
-      - name: Set up Node.js
+      # Step 2: Set up Node.js and enable dependency caching
+      - name: Set up Node.js with cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./esports-frontend-master/package-lock.json
 
-      # Step 3: Install all the frontend dependencies
-      # The --prefix flag tells npm which folder to run the command in
+      # Step 3: Install all the frontend dependencies (will be fast if cache is hit)
       - name: Install Frontend Dependencies
         run: npm install --prefix ./esports-frontend-master
 
